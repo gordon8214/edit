@@ -17,6 +17,51 @@ harness = false
 [features]
 debug-latency = []
 
+# Syntax highlighting - default to all languages
+default = [
+    "syntax-rust", "syntax-python", "syntax-javascript", "syntax-typescript",
+    "syntax-c", "syntax-cpp", "syntax-swift", "syntax-go", "syntax-java",
+    "syntax-ruby", "syntax-php", "syntax-kotlin", "syntax-scala",
+    "syntax-haskell", "syntax-elixir", "syntax-zig",
+    "syntax-html", "syntax-css",
+    "syntax-markdown", "syntax-json", "syntax-yaml", "syntax-xml",
+    "syntax-bash", "syntax-sql", "syntax-dockerfile"
+]
+
+# Programming languages
+syntax-rust = ["dep:tree-sitter-rust"]
+syntax-python = ["dep:tree-sitter-python"]
+syntax-javascript = ["dep:tree-sitter-javascript"]
+syntax-typescript = ["dep:tree-sitter-typescript"]
+syntax-c = ["dep:tree-sitter-c"]
+syntax-cpp = ["dep:tree-sitter-cpp"]
+syntax-swift = ["dep:tree-sitter-swift"]
+syntax-go = ["dep:tree-sitter-go"]
+syntax-java = ["dep:tree-sitter-java"]
+syntax-ruby = ["dep:tree-sitter-ruby"]
+syntax-php = ["dep:tree-sitter-php"]
+syntax-kotlin = ["dep:tree-sitter-kotlin"]
+syntax-scala = ["dep:tree-sitter-scala"]
+syntax-haskell = ["dep:tree-sitter-haskell"]
+syntax-elixir = ["dep:tree-sitter-elixir"]
+syntax-zig = ["dep:tree-sitter-zig"]
+
+# Web languages
+syntax-html = ["dep:tree-sitter-html"]
+syntax-css = ["dep:tree-sitter-css"]
+
+# Markup and data formats
+syntax-markdown = ["dep:tree-sitter-markdown"]
+syntax-json = ["dep:tree-sitter-json"]
+syntax-yaml = ["dep:tree-sitter-yaml"]
+syntax-toml = ["dep:tree-sitter-toml"]
+syntax-xml = ["dep:tree-sitter-xml"]
+
+# Shell and config
+syntax-bash = ["dep:tree-sitter-bash"]
+syntax-sql = ["dep:tree-sitter-sql"]
+syntax-dockerfile = ["dep:tree-sitter-dockerfile"]
+
 # We use `opt-level = "s"` as it significantly reduces binary size.
 # We could then use the `#[optimize(speed)]` attribute for spot optimizations.
 # Unfortunately, that attribute currently doesn't work on intrinsics such as memset.
@@ -35,6 +80,43 @@ codegen-units = 16          # Make compiling criterion faster (16 is the default
 lto = "thin"                # Similarly, speed up linking by a ton
 
 [dependencies]
+# Tree-sitter core libraries
+tree-sitter = "0.25"
+tree-sitter-highlight = "0.25"
+
+# Programming languages
+tree-sitter-rust = { version = "0.23", optional = true }
+tree-sitter-python = { version = "0.23", optional = true }
+tree-sitter-javascript = { version = "0.23", optional = true }
+tree-sitter-typescript = { version = "0.23", optional = true }
+tree-sitter-c = { version = "0.23", optional = true }
+tree-sitter-cpp = { version = "0.23", optional = true }
+tree-sitter-swift = { version = "0.7", optional = true }
+tree-sitter-go = { version = "0.23", optional = true }
+tree-sitter-java = { version = "0.23", optional = true }
+tree-sitter-ruby = { version = "0.23", optional = true }
+tree-sitter-php = { version = "0.23", optional = true }
+tree-sitter-kotlin = { version = "0.3", optional = true }
+tree-sitter-scala = { version = "0.23", optional = true }
+tree-sitter-haskell = { version = "0.23", optional = true }
+tree-sitter-elixir = { version = "0.3", optional = true }
+tree-sitter-zig = { version = "1.1", optional = true }
+
+# Web languages
+tree-sitter-html = { version = "0.23", optional = true }
+tree-sitter-css = { version = "0.23", optional = true }
+
+# Markup and data formats
+tree-sitter-markdown = { version = "0.7", optional = true }
+tree-sitter-json = { version = "0.24", optional = true }
+tree-sitter-yaml = { version = "0.7", optional = true }
+tree-sitter-toml = { version = "0.20", optional = true }
+tree-sitter-xml = { version = "0.7", optional = true }
+
+# Shell and config
+tree-sitter-bash = { version = "0.23", optional = true }
+tree-sitter-sql = { version = "0.0.2", optional = true }
+tree-sitter-dockerfile = { version = "0.2", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

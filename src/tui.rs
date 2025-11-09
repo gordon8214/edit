@@ -987,9 +987,20 @@ impl Tui {
                     destination.right -= 1;
                 }
 
-                if let Some(res) =
-                    tb.render(tc.scroll_offset, destination, tc.has_focus, &mut self.framebuffer)
-                {
+                // Convert raw pointer to Option<&mut SyntaxHighlighter>
+                let syntax_ref = if tc.syntax.is_null() {
+                    None
+                } else {
+                    Some(unsafe { &mut *tc.syntax })
+                };
+
+                if let Some(res) = tb.render(
+                    tc.scroll_offset,
+                    destination,
+                    tc.has_focus,
+                    &mut self.framebuffer,
+                    syntax_ref,
+                ) {
                     tc.scroll_offset_x_max = res.visual_pos_x_max;
                 }
 
@@ -2056,15 +2067,29 @@ impl<'a> Context<'a, '_> {
     /// Creates a text input field.
     /// Returns true if the text contents changed.
     pub fn editline(&mut self, classname: &'static str, text: &mut dyn WriteableDocument) -> bool {
-        self.textarea_internal(classname, TextBufferPayload::Editline(text))
+        self.textarea_internal(classname, TextBufferPayload::Editline(text), std::ptr::null_mut())
     }
 
     /// Creates a text area.
     pub fn textarea(&mut self, classname: &'static str, tb: RcTextBuffer) {
-        self.textarea_internal(classname, TextBufferPayload::Textarea(tb));
+        self.textarea_with_syntax(classname, tb, std::ptr::null_mut());
     }
 
-    fn textarea_internal(&mut self, classname: &'static str, payload: TextBufferPayload) -> bool {
+    pub fn textarea_with_syntax(
+        &mut self,
+        classname: &'static str,
+        tb: RcTextBuffer,
+        syntax: *mut crate::syntax::SyntaxHighlighter,
+    ) {
+        self.textarea_internal(classname, TextBufferPayload::Textarea(tb), syntax);
+    }
+
+    fn textarea_internal(
+        &mut self,
+        classname: &'static str,
+        payload: TextBufferPayload,
+        syntax: *mut crate::syntax::SyntaxHighlighter,
+    ) -> bool {
         self.block_begin(classname);
         self.block_end();
 
@@ -2115,6 +2140,7 @@ impl<'a> Context<'a, '_> {
             preferred_column: 0,
             single_line,
             has_focus: self.tui.is_node_focused(node.id),
+            syntax,
         });
 
         let content = match node.content {
@@ -2125,6 +2151,9 @@ impl<'a> Context<'a, '_> {
         if let TextBufferPayload::Editline(text) = &payload {
             content.buffer.borrow_mut().copy_from_str(*text);
         }
+
+        // Update syntax pointer to current value
+        content.syntax = syntax;
 
         if let Some(node_prev) = self.tui.prev_node_map.get(node.id) {
             let node_prev = node_prev.borrow();
@@ -3681,6 +3710,7 @@ struct TextareaContent<'a> {
 
     single_line: bool,
     has_focus: bool,
+    syntax: *mut crate::syntax::SyntaxHighlighter,
 }
 
 /// NOTE: Must not contain items that require drop().

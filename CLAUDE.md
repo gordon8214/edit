@@ -127,13 +127,30 @@ This project has unique architectural decisions focused on performance:
 
 ## Performance Priorities
 
-1. **Good performance**: Fast enough for 1GB+ files
-   - SIMD optimizations critical
-   - O(n) navigation acceptable due to SIMD speed
-2. **Binary size**: This fork is less concerned with binary size compared to upstream
-   - Adding desirable features is prioritized over minimal binary size
-   - Good optimization practices are still important
-   - Dependencies can be added when they provide clear value
+### Core Performance Requirements
+
+1. **Large file support is critical**: The editor MUST remain responsive with 1GB+ files
+   - Test new features with large files (10MB+, ideally 100MB+)
+   - SIMD optimizations are critical for performance
+   - O(n) operations are acceptable due to SIMD speed, but O(n²) is not
+
+2. **Never regress performance when adding features**
+   - Profile and measure performance impact of new code
+   - Consider per-frame cost: code in render loops affects every visible line
+   - Watch for hidden O(n) loops inside render loops (becomes O(n × visible_lines))
+
+3. **Common performance pitfalls to avoid**:
+   - **Per-line computation**: Don't recompute file-wide data for each visible line
+   - **Per-frame allocation**: Cache results that don't change between frames
+   - **Generation-based caching**: Use buffer generation counter to invalidate caches only when needed
+   - **Example**: Syntax highlighting computes highlights once per file change, not per line or per frame
+
+### Binary Size
+
+This fork is less concerned with binary size compared to upstream:
+- Adding desirable features is prioritized over minimal binary size
+- Good optimization practices should still be maintained
+- Dependencies can be added when they provide clear value
 
 ## Localization
 

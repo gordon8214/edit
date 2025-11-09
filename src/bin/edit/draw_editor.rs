@@ -25,8 +25,9 @@ pub fn draw_editor(ctx: &mut Context, state: &mut State) {
         _ => 2,
     };
 
-    if let Some(doc) = state.documents.active() {
-        ctx.textarea("textarea", doc.buffer.clone());
+    if let Some(doc) = state.documents.active_mut() {
+        let syntax_ptr = doc.syntax.as_mut().map_or(std::ptr::null_mut(), |s| s as *mut _);
+        ctx.textarea_with_syntax("textarea", doc.buffer.clone(), syntax_ptr);
         ctx.inherit_focus();
     } else {
         ctx.block_begin("empty");

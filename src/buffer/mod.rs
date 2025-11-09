@@ -1703,12 +1703,15 @@ impl TextBuffer {
     /// Extracts a rectangular region of the text buffer and writes it to the framebuffer.
     /// The `destination` rect is framebuffer coordinates. The extracted region within this
     /// text buffer has the given `origin` and the same size as the `destination` rect.
+    ///
+    /// Optionally accepts a syntax highlighter to apply syntax highlighting to the rendered text.
     pub fn render(
         &mut self,
         origin: Point,
         destination: Rect,
         focused: bool,
         fb: &mut Framebuffer,
+        mut syntax: Option<&mut crate::syntax::SyntaxHighlighter>,
     ) -> Option<RenderResult> {
         if destination.is_empty() {
             return None;
@@ -1738,6 +1741,29 @@ impl TextBuffer {
         };
 
         line.reserve(width as usize * 2);
+
+        // Update syntax highlighting if the buffer generation changed
+        // This collects the source buffer only when needed and caches it in the highlighter
+        if let Some(highlighter) = syntax.as_mut() {
+            let current_generation = self.generation();
+
+            // Only collect source if generation changed (checked inside update())
+            // We check here to avoid the allocation if not needed
+            if highlighter.buffer_generation != current_generation {
+                let mut source = Vec::new();
+                let mut offset = 0;
+                let total_len = self.text_length();
+                while offset < total_len {
+                    let chunk = self.read_forward(offset);
+                    if chunk.is_empty() {
+                        break;
+                    }
+                    source.extend_from_slice(chunk);
+                    offset += chunk.len();
+                }
+                highlighter.update(source, current_generation);
+            }
+        }
 
         for y in 0..height {
             line.clear();
@@ -1961,6 +1987,39 @@ impl TextBuffer {
                 }
 
                 visual_pos_x_max = visual_pos_x_max.max(cursor_end.visual_pos.x);
+            }
+
+            // Apply syntax highlighting if available
+            if let Some(highlighter) = syntax.as_mut() {
+                // Get highlights for this line's byte range from the cache
+                if cursor_beg.offset < cursor_end.offset {
+                    let highlights = highlighter.get_highlights(
+                        cursor_beg.offset,
+                        cursor_end.offset,
+                        fb,
+                    );
+
+                    // Apply each highlight span
+                    for highlight in highlights {
+                        // Convert byte offsets to visual columns
+                        let start_cursor = self.cursor_move_to_offset_internal(cursor_beg, highlight.start_byte);
+                        let end_cursor = self.cursor_move_to_offset_internal(start_cursor, highlight.end_byte);
+
+                        let start_col = start_cursor.visual_pos.x;
+                        let end_col = end_cursor.visual_pos.x;
+
+                        if start_col < end_col {
+                            let rect = Rect {
+                                left: destination.left + self.margin_width + start_col - origin.x,
+                                top: destination.top + y,
+                                right: destination.left + self.margin_width + end_col - origin.x,
+                                bottom: destination.top + y + 1,
+                            };
+
+                            fb.blend_fg(rect, highlight.color);
+                        }
+                    }
+                }
             }
 
             fb.replace_text(destination.top + y, destination.left, destination.right, &line);

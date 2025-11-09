@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use edit::buffer::{RcTextBuffer, TextBuffer};
 use edit::helpers::{CoordType, Point};
+use edit::syntax::{Language, SyntaxHighlighter};
 use edit::{apperr, path, sys};
 
 use crate::state::DisplayablePathBuf;
@@ -19,6 +20,7 @@ pub struct Document {
     pub filename: String,
     pub file_id: Option<sys::FileId>,
     pub new_file_counter: usize,
+    pub syntax: Option<SyntaxHighlighter>,
 }
 
 impl Document {
@@ -65,6 +67,53 @@ impl Document {
         self.dir = Some(DisplayablePathBuf::from_path(dir));
         self.path = Some(path);
         self.update_file_mode();
+    }
+
+    fn init_syntax(&mut self) {
+        // Try to detect language from filename first
+        let language = Language::from_filename(&self.filename)
+            .or_else(|| {
+                // Try to detect from extension
+                self.path
+                    .as_ref()
+                    .and_then(|p| p.extension())
+                    .and_then(|ext| ext.to_str())
+                    .and_then(Language::from_extension)
+            });
+
+        if let Some(lang) = language {
+            match SyntaxHighlighter::new(lang) {
+                Ok(mut highlighter) => {
+                    // Parse the initial buffer content
+                    let buffer = self.buffer.borrow();
+
+                    // Collect buffer contents into a contiguous Vec
+                    let mut source = Vec::new();
+                    let mut offset = 0;
+                    let total_len = buffer.text_length();
+                    while offset < total_len {
+                        let chunk = buffer.read_forward(offset);
+                        if chunk.is_empty() {
+                            break;
+                        }
+                        source.extend_from_slice(chunk);
+                        offset += chunk.len();
+                    }
+
+                    let generation = buffer.generation();
+                    drop(buffer);
+
+                    highlighter.update(source, generation);
+                    self.syntax = Some(highlighter);
+                }
+                Err(_) => {
+                    // Language not enabled via feature flag, or other error
+                    self.syntax = None;
+                }
+            }
+        } else {
+            self.syntax = None;
+        }
     }
 
     fn update_file_mode(&mut self) {
@@ -121,6 +170,7 @@ impl DocumentManager {
             filename: Default::default(),
             file_id: None,
             new_file_counter: 0,
+            syntax: None,
         };
         self.gen_untitled_name(&mut doc);
 
@@ -181,8 +231,10 @@ impl DocumentManager {
             filename: Default::default(),
             file_id,
             new_file_counter: 0,
+            syntax: None,
         };
         doc.set_path(path);
+        doc.init_syntax();
 
         if let Some(active) = self.active()
             && active.path.is_none()

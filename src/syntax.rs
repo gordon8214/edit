@@ -188,6 +188,7 @@ impl SyntaxHighlighter {
             "punctuation",
             "punctuation.bracket",
             "punctuation.delimiter",
+            "punctuation.special",
             "string",
             "string.special",
             "tag",
@@ -196,6 +197,16 @@ impl SyntaxHighlighter {
             "variable",
             "variable.builtin",
             "variable.parameter",
+            // Markup scopes (for Markdown, etc.)
+            "markup.heading",
+            "markup.bold",
+            "markup.italic",
+            "markup.raw.inline",
+            "markup.raw.block",
+            "markup.link.url",
+            "markup.link.label",
+            "markup.link.text",
+            "markup.quote",
         ]
         .iter()
         .map(|s| s.to_string())
@@ -559,7 +570,18 @@ fn get_highlight_color(scope: &str, fb: &Framebuffer) -> StraightRgba {
         "punctuation" | "punctuation.bracket" | "punctuation.delimiter" => {
             fb.indexed(IndexedColor::Foreground)
         }
+        "punctuation.special" => fb.indexed(IndexedColor::Yellow),
         "variable" | "variable.builtin" => fb.indexed(IndexedColor::Foreground),
+        // Markup scopes (for Markdown, etc.)
+        "markup.heading" => fb.indexed(IndexedColor::BrightCyan),
+        "markup.bold" => fb.indexed(IndexedColor::BrightWhite),
+        "markup.italic" => fb.indexed(IndexedColor::BrightMagenta),
+        "markup.raw.inline" => fb.indexed(IndexedColor::Green),
+        "markup.raw.block" => fb.indexed(IndexedColor::Green),
+        "markup.link.url" => fb.indexed(IndexedColor::BrightBlue),
+        "markup.link.label" => fb.indexed(IndexedColor::Cyan),
+        "markup.link.text" => fb.indexed(IndexedColor::BrightWhite),
+        "markup.quote" => fb.indexed(IndexedColor::BrightBlack),
         _ => fb.indexed(IndexedColor::Foreground),
     }
 }
